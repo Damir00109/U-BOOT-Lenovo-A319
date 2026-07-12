@@ -1,0 +1,337 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2025 Max Shevchenko <wctrl@proton.me>
+ */
+
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include "mt6572.dtsi"
+#include "mt6323.dtsi"
+
+/ {
+	model = "Lenovo A369i";
+	compatible = "lenovo,a369i", "mediatek,mt6572";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		stdout-path = "serial0:921600n8";
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x80000000 0x20000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		framebuffer_reserved: framebuffer@9fa00000 {
+			reg = <0x9fa00000 0x600000>;
+			no-map;
+		};
+	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm 1 31250>;
+
+		power-supply = <&mt6323_vsys_reg>;
+
+		brightness-levels = <0 1023>;
+		num-interpolated-steps = <1023>;
+		default-brightness-level = <512>;
+	};
+};
+
+&cpu0 {
+	proc-supply = <&mt6323_vproc_reg>;
+};
+
+&cpu1 {
+	proc-supply = <&mt6323_vproc_reg>;
+};
+
+&dsi {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        status = "okay";
+
+        panel@0 {
+		compatible = "djn,otm8018b";
+		reg = <0>;
+		vcc-supply = <&mt6323_vgp1_reg>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&panel_pins>;
+
+		backlight = <&backlight>;
+
+		reset-gpios = <&pio 59 GPIO_ACTIVE_HIGH>;
+
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&dsi_out>;
+			};
+		};
+        };
+};
+
+&dsi_out {
+	remote-endpoint = <&panel_in>;
+};
+
+&gpu {
+	assigned-clocks = <&topckgen CLK_TOP_MFG_SEL>,
+			  <&topckgen CLK_TOP_MFG_PRE_SEL>;
+	assigned-clock-parents = <&topckgen CLK_TOP_MFG_PRE_500M>,
+				 <&topckgen CLK_TOP_MFG_SEL>;
+
+	operating-points-v2 = <&gpu_opp_table>;
+
+	status = "okay";
+};
+
+&keyboard {
+	pinctrl-0 = <&keypad_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	debounce-delay-ms = <32>;
+	keypad,num-rows = <1>;
+	keypad,num-columns = <3>;
+	linux,keymap = <MATRIX_KEY(0, 1, KEY_DOWN)
+			MATRIX_KEY(0, 2, KEY_UP)>;
+};
+
+&mmc0 {
+	bus-width = <8>;
+	max-frequency = <200000000>;
+	mmc-ddr-1_8v;
+	cap-mmc-highspeed;
+	non-removable;
+	no-sd;
+	no-sdio;
+
+	vmmc-supply = <&mt6323_vemc3v3_reg>;
+	vqmmc-supply = <&mt6323_vio18_reg>;
+	pinctrl-0 = <&mmc0_pins_default>;
+	pinctrl-1 = <&mmc0_pins_uhs>;
+	pinctrl-names = "default", "state_uhs";
+
+	assigned-clocks = <&topckgen CLK_TOP_MSDC0_SEL>;
+	assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D10>;
+
+	status = "okay";
+};
+
+&mmc1 {
+	bus-width = <4>;
+	max-frequency = <200000000>;
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
+	sd-uhs-ddr50;
+	cap-sd-highspeed;
+	non-removable;
+	no-mmc;
+	no-sdio;
+
+	vmmc-supply = <&mt6323_vmch_reg>;
+	vqmmc-supply = <&mt6323_vmc_reg>;
+	pinctrl-0 = <&mmc1_pins_default>;
+	pinctrl-1 = <&mmc1_pins_uhs>;
+	pinctrl-names = "default", "state_uhs";
+
+	assigned-clocks = <&topckgen CLK_TOP_MSDC1_SEL>;
+	assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D10>;
+
+	status = "okay";
+};
+
+&pio {
+	backlight_pins: backlight-pins {
+		mux {
+			function = "pwm2";
+			groups = "pwm2";
+		};
+	};
+
+	keypad_pins: keypad-pins {
+		mux {
+			function = "keypad";
+			groups = "kcol1", "kcol2";
+		};
+	};
+
+	mmc0_pins_default: mmc0-default-pins {
+		mux {
+			function = "msdc0";
+			groups = "msdc0";
+		};
+	
+		conf-cmd-dat {
+			pins = "GPIO45", "GPIO46", "GPIO47", "GPIO48",
+			       "GPIO49", "GPIO50", "GPIO51", "GPIO52",
+			       "GPIO53";
+			input-enable;
+			input-schmitt-enable;
+			drive-strength = <6>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+
+		conf-clk {
+			pins = "GPIO44";
+			drive-strength = <6>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+
+		pins-rst {
+			pins = "GPIO54";
+			drive-strength = <6>;
+			bias-pull-up;
+		};
+	};
+
+	mmc0_pins_uhs: mmc0-uhs-pins {
+		mux {
+			function = "msdc0";
+			groups = "msdc0";
+		};
+	
+		conf-cmd-dat {
+			pins = "GPIO45", "GPIO46", "GPIO47", "GPIO48",
+			       "GPIO49", "GPIO50", "GPIO51", "GPIO52",
+			       "GPIO53";
+			input-enable;
+			input-schmitt-enable;
+			drive-strength = <8>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
+		};
+
+		conf-clk {
+			pins = "GPIO44";
+			drive-strength = <8>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+
+		pins-rst {
+			pins = "GPIO54";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+	};
+
+	mmc1_pins_default: mmc1-default-pins {
+		mux {
+			function = "msdc1";
+			groups = "msdc1";
+		};
+
+		conf-cmd-dat {
+			pins = "GPIO92", "GPIO93", "GPIO94", "GPIO95",
+			       "GPIO96";
+			input-enable;
+			input-schmitt-enable;
+			drive-strength = <20>;
+			bias-pull-up;
+			mediatek,tdsel = <5>;
+		};
+
+		conf-clk {
+			pins = "GPIO91";
+			drive-strength = <20>;
+			bias-pull-down;
+		};
+	};
+
+	mmc1_pins_uhs: mmc1-uhs-pins {
+		mux {
+			function = "msdc1";
+			groups = "msdc1";
+		};
+
+		conf-cmd-dat {
+			pins = "GPIO92", "GPIO93", "GPIO94", "GPIO95",
+			       "GPIO96";
+			input-enable;
+			input-schmitt-enable;
+			drive-strength = <28>;
+			bias-pull-up;
+			mediatek,tdsel = <0>;
+		};
+
+		conf-clk {
+			pins = "GPIO91";
+			drive-strength = <28>;
+			bias-pull-down;
+		};
+	};
+
+	panel_pins: panel-pins {
+		mux {
+			function = "panel";
+			groups = "panel";
+		};
+
+		conf-enable {
+			pins = "GPIO56";
+			bias-disable;
+		};
+
+		conf-reset {
+			pins = "GPIO59";
+			bias-disable;
+		};
+	};
+
+	pmic_pins: pmic-pins {
+		mux {
+			function = "pmic";
+			groups = "pmic_eint";
+		};
+	};
+
+	uart0_pins: uart0-pins {
+		mux {
+			function = "uart";
+			groups = "uart0";
+		};
+	};
+};
+
+&pmic {
+	pinctrl-0 = <&pmic_pins>;
+	pinctrl-names = "default";
+
+	interrupts = <16 IRQ_TYPE_LEVEL_HIGH>;
+};
+
+&pwm {
+	pinctrl-0 = <&backlight_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&u2phy0 {
+	status = "okay";
+};
+
+&uart0 {
+	pinctrl-0 = <&uart0_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&usb {
+	status = "okay";
+};
