@@ -1,5 +1,4 @@
 TODO:
-- poweroff
 - PSCI
 - charger, fuel gauge
 - replace LK (almost done)
@@ -14,7 +13,7 @@ status:
 - USB: ok
 - input keys (power + volume): ok
 - hw video: ok
-
+- sudo poweroff: ok
 
 U-Boot changes made by Dr. clk120m:
 - MUSB speed improvements (4.6s -> 0.88s for 30 MB file transfer)
