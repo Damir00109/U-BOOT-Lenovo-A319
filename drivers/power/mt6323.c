@@ -6,32 +6,36 @@
 #include <command.h>
 #include <asm/io.h>
 #include <linux/delay.h>
-
-#define PWRAP_BASE		0x1000d000
-#define PWRAP_WACS2_CMD		0x9c
-
-#define PWRAP_CALC(adr, wdata) ((1 << 31) | (((adr) >> 1) << 16) | (wdata))
+#include <linux/bitops.h>
+#include <power/pmic.h>
+#include <dm.h>
 
 #define MT6323_PWRC_BASE	0x8000
 #define RTC_BBPU		0x0000
 #define RTC_BBPU_KEY		(0x43 << 8)
 #define RTC_WRTGR		0x003c
+#define RTC_BBPU_PWREN		BIT(0)
+#define RTC_BBPU_AUTO		BIT(3)
 
 int do_poweroff(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
-	u32 addr, val;
+	struct udevice *pmic;
+	u16 val;
+	int ret;
 
-	addr = PWRAP_BASE + PWRAP_WACS2_CMD;
-	val = PWRAP_CALC(MT6323_PWRC_BASE + RTC_BBPU, RTC_BBPU_KEY);
-	writel(val, addr);
+	ret = uclass_get_device(UCLASS_PMIC, 0, &pmic);
+	if (ret) {
+		printf("Failed to find mt6323 dev (%d)\n", ret);
+		return ret;
+	}
 
+	val = RTC_BBPU_KEY | RTC_BBPU_PWREN | RTC_BBPU_AUTO;
+	pmic_reg_write(pmic, MT6323_PWRC_BASE + RTC_BBPU, val);
+	pmic_reg_write(pmic, MT6323_PWRC_BASE + RTC_WRTGR, 1);
 	mdelay(10);
 
-	val = PWRAP_CALC(MT6323_PWRC_BASE + RTC_WRTGR, 1);
-	writel(val, addr);
-
-	// wait some time and then print error
-	mdelay(10000);
-	printf("Failed to power off!!!\n");
-	return 1;
+	mdelay(400);
+	/* If device isn't off by this point then usb needs to be unplugged */
+	printf("Unplug USB to shutdown!\n");
+	return CMD_RET_SUCCESS;
 }
