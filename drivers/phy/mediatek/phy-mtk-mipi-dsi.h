@@ -23,6 +23,7 @@ struct udevice;
  * directly from the PHY ops.
  */
 struct mtk_mipitx_data {
+	u32 mppll_preserve;
 	u64 (*pll_determine_rate)(struct mtk_mipi_tx *mipi_tx, u64 rate);
 	int (*pll_enable)(struct mtk_mipi_tx *mipi_tx);
 	void (*pll_disable)(struct mtk_mipi_tx *mipi_tx);
@@ -40,6 +41,8 @@ struct mtk_mipi_tx {
 	const struct mtk_mipitx_data *driver_data;
 };
 
+extern const struct mtk_mipitx_data mt2701_mipitx_data;
+extern const struct mtk_mipitx_data mt8173_mipitx_data;
 extern const struct mtk_mipitx_data mt8183_mipitx_data;
 
 #endif /* _PHY_MTK_MIPI_DSI_H */
