@@ -17,6 +17,7 @@ obj-$(CONFIG_MESON_SECURE_POWER_DOMAIN) += meson-secure-pwrc.o
 obj-$(CONFIG_MTK_POWER_DOMAIN) += mtk-power-domain.o
 ifdef CONFIG_MTK_POWER_DOMAIN
 # Some drivers are named after the first SoC they supported, not after a target.
+obj-$(CONFIG_TARGET_MT6572) += mt6572-power-domain.o
 obj-$(CONFIG_TARGET_MT7623) += mt2701-power-domain.o
 obj-$(CONFIG_TARGET_MT7622)$(CONFIG_TARGET_MT7629) += mt7622-power-domain.o
 obj-$(CONFIG_TARGET_MT8188) += mt8188-power-domain.o

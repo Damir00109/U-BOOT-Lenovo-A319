@@ -520,6 +520,14 @@ static int mtk_scpsys_add_one_domain(struct udevice *dev, ofnode node, int paren
 		if (!bpd->bus_prot_mask)
 			continue;
 
+		if ((bpd->bus_prot_block == BUS_PROT_BLOCK_INFRA ||
+		     bpd->bus_prot_sta_block == BUS_PROT_BLOCK_INFRA) &&
+		    !domain->infracfg && !scpsys->infracfg) {
+			dev_err(dev, "%s: missing infracfg for bus protection\n",
+				ofnode_get_name(node));
+			return -EINVAL;
+		}
+
 		if ((bpd->bus_prot_block == BUS_PROT_BLOCK_INFRA_NAO ||
 		     bpd->bus_prot_sta_block == BUS_PROT_BLOCK_INFRA_NAO) &&
 		    !domain->infracfg_nao) {
@@ -625,7 +633,9 @@ static int mtk_scpsys_add_subdomain(struct udevice *dev, ofnode node)
 
 int mtk_power_controller_probe(struct udevice *dev)
 {
+	struct ofnode_phandle_args args;
 	struct mtk_scpsys *scpsys = dev_get_priv(dev);
+	struct regmap *regmap;
 	ofnode subnode;
 	int ret;
 
@@ -639,6 +649,20 @@ int mtk_power_controller_probe(struct udevice *dev)
 				       sizeof(*scpsys->domains), GFP_KERNEL);
 	if (!scpsys->domains)
 		return -ENOMEM;
+
+	ret = dev_read_phandle_with_args(dev, "access-controllers",
+					 "#access-controller-cells", 0, 0, &args);
+	if (ret)
+		ret = dev_read_phandle_with_args(dev, "access-controllers", NULL, 0, 0, &args);
+	if (ret)
+		ret = dev_read_phandle_with_args(dev, "mediatek,infracfg", NULL, 0, 0, &args);
+	if (ret)
+		ret = dev_read_phandle_with_args(dev, "infracfg", NULL, 0, 0, &args);
+	if (!ret) {
+		regmap = syscon_node_to_regmap(args.node);
+		if (!IS_ERR(regmap))
+			scpsys->infracfg = regmap_get_range(regmap, 0);
+	}
 
 	dev_for_each_subnode(subnode, dev) {
 		ret = mtk_scpsys_add_one_domain(dev, subnode, -1);

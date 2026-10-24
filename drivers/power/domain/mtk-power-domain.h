@@ -24,6 +24,7 @@ struct udevice;
 #define SPM_ISP_PWR_CON		0x0238
 #define SPM_DIS_PWR_CON		0x023c
 #define SPM_CONN_PWR_CON	0x0280
+#define SPM_MD1_PWR_CON		0x0284
 #define SPM_BDP_PWR_CON		0x029c
 #define SPM_ETH_PWR_CON		0x02a0
 #define SPM_HIF_PWR_CON		0x02a4
@@ -60,6 +61,7 @@ struct udevice;
 #define MTK_SCPD_SRAM_PDN_INVERTED	BIT(1)
 #define MTK_SCPD_STRICT_BUS_PROTECTION	BIT(2)
 
+#define PWR_STATUS_MD1		BIT(0)
 #define PWR_STATUS_CONN		BIT(1)
 #define PWR_STATUS_DISP		BIT(3)
 #define PWR_STATUS_MFG		BIT(4)
@@ -193,6 +195,16 @@ struct mtk_scpsys {
 #define BUS_PROT_WR_IGN_STA_MASK(_block, _mask, _sta_mask, _set, _clr, _sta) \
 	_BUS_PROT(_block, _block, _mask, _set, _clr, _sta_mask, _sta, \
 		  false, true, false, false)
+
+#define BUS_PROT_UPDATE(_block, _mask, _set, _clr, _sta)	\
+	_BUS_PROT(_block, _block, _mask, _set, _clr, _mask, _sta, \
+		  true, false, false, false)
+
+#define BUS_PROT_INFRA_UPDATE_TOPAXI(_mask)			\
+	BUS_PROT_UPDATE(INFRA, _mask,				\
+			INFRA_TOPAXI_PROT_EN,			\
+			INFRA_TOPAXI_PROT_EN,			\
+			INFRA_TOPAXI_PROT_STA1)
 
 /*
  * Way-enable protection: the set/clear polarity is inverted and the
