@@ -3,8 +3,11 @@
 #include <asm/io.h>
 #include <clk.h>
 #include <dm.h>
+#include <env.h>
 #include <init.h>
 #include <fdt_support.h>
+#include <mmc.h>
+#include <wdt.h>
 #include <dt-bindings/clock/mediatek,mt6572-clk.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -99,6 +102,18 @@ int board_late_init(void)
 	struct udevice *dev;
 	int ret;
 
+	/* Give fastboot and USB a stable, device-unique serial number. */
+	struct mmc *mmc = find_mmc_device(0);
+
+	if (mmc && !mmc_init(mmc)) {
+		/* Product serial number lives in the lower half of CID[2..3]. */
+		u32 psn = ((mmc->cid[2] & 0xffff) << 16) | (mmc->cid[3] >> 16);
+		char serial[16];
+
+		snprintf(serial, sizeof(serial), "A319%08x", psn);
+		env_set("serial#", serial);
+	}
+
 	ret = uclass_get_device(UCLASS_USB_GADGET_GENERIC, 0, &dev);
 	if (ret) {
 		printf("%s: failed to get USB: %d\n", __func__, ret);
@@ -108,12 +123,23 @@ int board_late_init(void)
 	return 0;
 }
 
+/*
+ * The watchdog is started by U-Boot and serviced by its cyclic handler.
+ * Nothing pings it between the handoff and the OS watchdog driver, so stop
+ * it here to avoid a reset during early kernel boot.
+ */
+void arch_preboot_os(void)
+{
+	wdt_stop_all();
+}
+
 /* LK framebuffer */
 phys_addr_t board_get_usable_ram_top(phys_addr_t total_size)
 {
 	if (of_machine_is_compatible("jty,d101"))
 		return 0xbf400000;
-	else if (of_machine_is_compatible("lenovo,a369i"))
+	else if (of_machine_is_compatible("lenovo,a369i") ||
+		 of_machine_is_compatible("lenovo,a319"))
 		return 0x9fa00000;
 	else
 		panic("invalid compatible");

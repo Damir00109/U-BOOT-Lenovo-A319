@@ -203,6 +203,7 @@ struct mtk_dsi {
 	struct mtk_phy_timing phy_timing;
 
 	bool lanes_ready;
+	bool fixed_phy_timing;
 
 	const struct mtk_dsi_driver_data *driver_data;
 	struct udevice *panel;
@@ -224,22 +225,26 @@ static void mtk_dsi_phy_timconfig(struct mtk_dsi *dsi)
 	u32 data_rate_mhz = DIV_ROUND_UP(dsi->data_rate, 1000000);
 	struct mtk_phy_timing *timing = &dsi->phy_timing;
 
-	timing->lpx = (60 * data_rate_mhz / (8 * 1000)) + 1;
-	timing->da_hs_prepare = (80 * data_rate_mhz + 4 * 1000) / 8000;
-	timing->da_hs_zero = (170 * data_rate_mhz + 10 * 1000) / 8000 + 1 -
-			     timing->da_hs_prepare;
-	timing->da_hs_trail = timing->da_hs_prepare + 1;
+	if (dsi->fixed_phy_timing) {
+		/* Values come straight from the "mediatek,phy-timings" property. */
+	} else {
+		timing->lpx = (60 * data_rate_mhz / (8 * 1000)) + 1;
+		timing->da_hs_prepare = (80 * data_rate_mhz + 4 * 1000) / 8000;
+		timing->da_hs_zero = (170 * data_rate_mhz + 10 * 1000) / 8000 + 1 -
+				     timing->da_hs_prepare;
+		timing->da_hs_trail = timing->da_hs_prepare + 1;
 
-	timing->ta_go = 4 * timing->lpx - 2;
-	timing->ta_sure = timing->lpx + 2;
-	timing->ta_get = 4 * timing->lpx;
-	timing->da_hs_exit = 2 * timing->lpx + 1;
+		timing->ta_go = 4 * timing->lpx - 2;
+		timing->ta_sure = timing->lpx + 2;
+		timing->ta_get = 4 * timing->lpx;
+		timing->da_hs_exit = 2 * timing->lpx + 1;
 
-	timing->clk_hs_prepare = 70 * data_rate_mhz / (8 * 1000);
-	timing->clk_hs_post = timing->clk_hs_prepare + 8;
-	timing->clk_hs_trail = timing->clk_hs_prepare;
-	timing->clk_hs_zero = timing->clk_hs_trail * 4;
-	timing->clk_hs_exit = 2 * timing->clk_hs_trail;
+		timing->clk_hs_prepare = 70 * data_rate_mhz / (8 * 1000);
+		timing->clk_hs_post = timing->clk_hs_prepare + 8;
+		timing->clk_hs_trail = timing->clk_hs_prepare;
+		timing->clk_hs_zero = timing->clk_hs_trail * 4;
+		timing->clk_hs_exit = 2 * timing->clk_hs_trail;
+	}
 
 	timcon0 = FIELD_PREP(LPX, timing->lpx) |
 		  FIELD_PREP(HS_PREP, timing->da_hs_prepare) |
@@ -881,6 +886,17 @@ static int mtk_dsi_probe(struct udevice *dev)
 	dsi->driver_data = (struct mtk_dsi_driver_data *)dev_get_driver_data(dev);
 
 	dsi->regs = dev_remap_addr(dev);
+
+	/*
+	 * Optional board-specific PHY timings, in this order: lpx,
+	 * da_hs_prepare, da_hs_zero, da_hs_trail, ta_go, ta_sure, ta_get,
+	 * da_hs_exit, clk_hs_zero, clk_hs_trail, clk_hs_prepare,
+	 * clk_hs_post, clk_hs_exit.
+	 */
+	ret = dev_read_u32_array(dev, "mediatek,phy-timings",
+				 (u32 *)&dsi->phy_timing,
+				 sizeof(dsi->phy_timing) / sizeof(u32));
+	dsi->fixed_phy_timing = !ret;
 
 	ret = clk_get_by_name(dev, "engine", &dsi->engine_clk);
 	if (ret)

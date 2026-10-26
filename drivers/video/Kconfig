@@ -618,6 +618,13 @@ config VIDEO_LCD_ORISETECH_OTM8018B
 	  Say Y here if you want to enable support for Orise Technology
 	  otm8018b 480x800 dsi 2dl panel.
 
+config VIDEO_LCD_ORISETECH_OTM8019A
+	bool "OTM8019A DSI LCD panel support"
+	select VIDEO_MIPI_DSI
+	help
+	  Say Y here if you want to enable support for Orise Technology
+	  otm8019a 480x800 dsi 2dl panel.
+
 config VIDEO_LCD_LG_LD070WX3
 	bool "LD070WX3 DSI LCD panel support"
 	depends on PANEL && BACKLIGHT

@@ -21,6 +21,7 @@
 #include <linux/bitfield.h>
 #include <linux/bitops.h>
 #include <linux/io.h>
+#include <linux/ioport.h>
 #include <linux/iopoll.h>
 #include <linux/printk.h>
 
@@ -1785,7 +1786,8 @@ static int msdc_of_to_plat(struct udevice *dev)
 	struct msdc_plat *plat = dev_get_plat(dev);
 	struct msdc_host *host = dev_get_priv(dev);
 	struct mmc_config *cfg = &plat->cfg;
-	fdt_addr_t base, top_base;
+	struct resource res;
+	fdt_addr_t base;
 	int ret;
 
 	base = dev_read_addr(dev);
@@ -1793,11 +1795,10 @@ static int msdc_of_to_plat(struct udevice *dev)
 		return -EINVAL;
 	host->base = map_sysmem(base, 0);
 
-	top_base = dev_read_addr_index(dev, 1);
-	if (top_base == FDT_ADDR_T_NONE)
-		host->top_base = NULL;
+	if (!dev_read_resource(dev, 1, &res))
+		host->top_base = map_sysmem(res.start, 0);
 	else
-		host->top_base = map_sysmem(top_base, 0);
+		host->top_base = NULL;
 
 	ret = mmc_of_parse(dev, cfg);
 	if (ret)

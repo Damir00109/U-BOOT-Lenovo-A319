@@ -162,6 +162,16 @@ static const struct pwm_ops mtk_disp_pwm_ops = {
 	.set_enable = mtk_disp_pwm_set_enable,
 };
 
+static const struct mtk_disp_pwm_data mt2701_pwm_data = {
+	.enable_mask = BIT(16),
+	.con0 = 0xa8,
+	.con0_sel = 0x2,
+	.con1 = 0xac,
+	.has_commit = false,
+	.bls_debug = 0xb0,
+	.bls_debug_mask = 0x3,
+};
+
 static const struct mtk_disp_pwm_data mt8183_pwm_data = {
 	.enable_mask = BIT(0),
 	.con0 = 0x18,
@@ -173,6 +183,7 @@ static const struct mtk_disp_pwm_data mt8183_pwm_data = {
 };
 
 static const struct udevice_id mtk_disp_pwm_ids[] = {
+	{ .compatible = "mediatek,mt2701-disp-pwm", .data = (ulong)&mt2701_pwm_data },
 	{ .compatible = "mediatek,mt8183-disp-pwm", .data = (ulong)&mt8183_pwm_data },
 	{ }
 };
